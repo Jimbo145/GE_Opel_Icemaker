@@ -1,0 +1,16 @@
+{
+  "domain": "ge_opal",
+  "name": "GE Opal Ice Maker",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": ["bluetooth_adapters"],
+  "documentation": "https://www.home-assistant.io/integrations/bluetooth/",
+  "iot_class": "local_push",
+  "version": "0.1.0",
+  "bluetooth": [
+    {
+      "service_uuid": "e2779da7-0a82-4be7-b754-31ed3e727253",
+      "connectable": true
+    }
+  ]
+}

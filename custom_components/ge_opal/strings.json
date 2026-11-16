@@ -1,0 +1,17 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect a GE Opal ice maker",
+        "description": "Enter the Bluetooth address of your Opal ice maker. The device must be visible to a connectable Home Assistant Bluetooth adapter.",
+        "data": {
+          "address": "Bluetooth address",
+          "name": "Name"
+        }
+      }
+    },
+    "error": {
+      "device_not_found": "The device is not currently visible to Home Assistant Bluetooth. Move it closer or check the adapter/proxy."
+    }
+  }
+}
