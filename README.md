@@ -26,12 +26,16 @@ Only Make State was positively verified to advertise `read` and `notify` in the 
 - Sensor: Cleaning Phase (raw numeric diagnostic)
 - Switch: Night Mode
 - Switch: Make Ice (state follows Make State == 1)
+- Button: Disconnect Bluetooth (drops the connection and stops auto-reconnecting, freeing the Opal for another client such as the phone app)
+- Button: Reconnect Bluetooth (resumes the connection worker and connects immediately)
+
+The two buttons stay available while the device is disconnected. The disconnected state is not persisted: it resets to connected when Home Assistant restarts or the entry is reloaded.
 
 ## Installation
 
 1. Copy `custom_components/ge_opal` into the Home Assistant configuration directory so the final path is `<config>/custom_components/ge_opal/`.
 2. Restart Home Assistant.
-3. Go to **Settings → Devices & services → Add integration** and search for **GE Opal Ice Maker**. If automatic discovery does not appear, use manual setup and enter the Bluetooth address.
+3. Onboarding: if Home Assistant sees the Opal advertising, a **Discovered** card appears under **Settings → Devices & services**; click **Add** and confirm. Otherwise choose **Add integration → GE Opal Ice Maker**: the flow lists nearby Opals to pick from, with an **Enter address manually** option (also shown automatically when none are found).
 4. Confirm the device is visible to a **connectable** Bluetooth adapter managed by Home Assistant.
 
 ## Pairing note

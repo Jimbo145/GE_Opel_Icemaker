@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Final
 
 DOMAIN: Final = "ge_opal"
-PLATFORMS: Final = ("sensor", "switch")
+PLATFORMS: Final = ("button", "sensor", "switch")
 
 CONF_ADDRESS: Final = "address"
 DEFAULT_NAME: Final = "GE Opal Ice Maker"

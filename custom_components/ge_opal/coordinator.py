@@ -47,6 +47,8 @@ class OpalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._runner: asyncio.Task | None = None
         self._stop_event = asyncio.Event()
         self._disconnect_event = asyncio.Event()
+        self.paused = False
+        self._wake_event = asyncio.Event()
         self._write_lock = asyncio.Lock()
         self.characteristic_properties: dict[str, list[str]] = {}
         self.raw_values: dict[str, int | None] = {
@@ -64,6 +66,7 @@ class OpalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Stop the worker and disconnect cleanly."""
         self._stop_event.set()
         self._disconnect_event.set()
+        self._wake_event.set()
         if self._runner:
             self._runner.cancel()
             try:
@@ -71,6 +74,28 @@ class OpalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             except asyncio.CancelledError:
                 pass
         await self._disconnect()
+
+    async def _sleep(self, timeout: float | None) -> None:
+        """Sleep until timeout, a stop request, or a pause/resume wake-up."""
+        try:
+            await asyncio.wait_for(self._wake_event.wait(), timeout=timeout)
+        except asyncio.TimeoutError:
+            pass
+        self._wake_event.clear()
+
+    async def async_disconnect_bluetooth(self) -> None:
+        """Disconnect and stop reconnecting until reconnect is requested."""
+        self.paused = True
+        self._disconnect_event.set()
+        self._wake_event.set()
+        await self._disconnect()
+        self.async_update_listeners()
+
+    async def async_reconnect_bluetooth(self) -> None:
+        """Resume the connection worker and connect immediately."""
+        self.paused = False
+        self._wake_event.set()
+        self.async_update_listeners()
 
     @staticmethod
     def _first_byte(data: bytearray | bytes) -> int | None:
@@ -131,15 +156,15 @@ class OpalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _connection_worker(self) -> None:
         """Connect, subscribe, refresh periodically, and reconnect on loss."""
         while not self._stop_event.is_set():
+            if self.paused:
+                await self._sleep(None)
+                continue
             device = bluetooth.async_ble_device_from_address(
                 self.hass, self.address, connectable=True
             )
             if device is None:
                 _LOGGER.debug("Opal %s is not currently reachable via HA Bluetooth", self.address)
-                try:
-                    await asyncio.wait_for(self._stop_event.wait(), timeout=RECONNECT_DELAY)
-                except asyncio.TimeoutError:
-                    pass
+                await self._sleep(RECONNECT_DELAY)
                 continue
 
             try:
@@ -180,13 +205,8 @@ class OpalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 _LOGGER.warning("GE Opal BLE connection failed; will retry", exc_info=True)
             finally:
                 await self._disconnect()
-                if not self._stop_event.is_set():
-                    try:
-                        await asyncio.wait_for(
-                            self._stop_event.wait(), timeout=RECONNECT_DELAY
-                        )
-                    except asyncio.TimeoutError:
-                        pass
+                if not self._stop_event.is_set() and not self.paused:
+                    await self._sleep(RECONNECT_DELAY)
 
     async def _disconnect(self) -> None:
         """Disconnect the current client and mark entities unavailable."""
