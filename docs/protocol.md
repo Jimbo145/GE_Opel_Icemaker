@@ -106,6 +106,20 @@ device.
 - Whether a schedule write requires the schedule to be enabled first, and
   whether notifications on `9e1ae873` fire when the schedule changes on-device.
 
+## Open questions: experiment playbooks
+
+All experiments below are read-only. Never write to the vendor service
+(`e936877a`) or any OTA characteristic; `ge_opal.send_raw` refuses it. Use
+`ge_opal.decode` on any value to see uint8/uint16/int/float/ASCII readings.
+
+| Unknown | Hypothesis | Experiment | Status |
+| --- | --- | --- | --- |
+| Vendor service `e936877a` | OTA/DFU | `ge_opal.explore_service` (default service). Record characteristics, properties, descriptors, readable values, whether notify subscribes. | not run |
+| `14ff6dfb`, `4fb34ab1` | OTA/DFU status, or unused state | `ge_opal.watch` on `unknown_14ff`, `unknown_4fb3`, `make_state`, `ice_bin` for 10+ min while the Opal idles, makes ice, bin is removed, and water is low. Note any value change vs. state. | not run |
+| Clean cycle `efe4bd77` | Non-zero while cleaning (make_state 4) | `capture_start` label `clean`, start a clean on the Opal's button or app, `capture_mark` at each phase, `capture_stop`. Compare against `make_state`. | not run |
+| Temperature `bd205030` | Raw degrees, unit unknown | `ge_opal.watch` on `temperature` at several points (cold start, after making ice, room ambient). Compare with the app's display and a thermometer. `ge_opal.decode` shows F/C conversion guesses. Fit scale/offset to 3+ points. | not run |
+| Schedule day order | Calendar order (bit0=Sunday) vs. app view-ID order | Set one day in the app, `snapshot` before/after, check which bit of which hour byte flips. Repeat for 2 days. | not run |
+
 ## Discovered / unknown (your findings)
 
 Add rows from your own captures here.

@@ -32,6 +32,8 @@ async def async_get_config_entry_diagnostics(
             "cached_services": dump_cached_services(coordinator),
             "recent_notifications": list(coordinator.notification_log),
             "last_probe": coordinator.last_probe,
+            "last_watch": coordinator.last_watch,
+            "last_explore": coordinator.last_explore,
             "snapshots": coordinator.snapshots,
             "last_capture": coordinator.last_capture,
         },

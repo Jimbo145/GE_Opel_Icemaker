@@ -84,6 +84,24 @@ Goal: work out what the Opal's other characteristics mean (e.g. scheduled on/off
 
 The diagnostics download also includes stored snapshots and the last capture, so you can attach them to a bug report or share them.
 
+### Exploring the remaining unknowns (read-only)
+
+Extra developer services (all read-only; writes to the vendor/OTA service are refused):
+
+- `ge_opal.decode` – shows many interpretations of a hex value (ints, floats, ASCII, bits, temperature guesses).
+- `ge_opal.watch` – polls chosen characteristics (`unknown_14ff`, `unknown_4fb3`, `clean_cycle`, `temperature`, `make_state`, `ice_bin`, `vendor`, or any UUID) and logs only changes with timestamps and decoded guesses.
+- `ge_opal.explore_service` – fully enumerates a service (default vendor service `e936877a`): properties, descriptors, values, notification subscription.
+
+Recommended order:
+
+1. `explore_service` (vendor service), once.
+2. `watch` on `unknown_14ff`, `unknown_4fb3`, `make_state`, `ice_bin` while idle, making ice, bin removed.
+3. `watch` on `temperature` at several known conditions; compare with the app/display.
+4. Clean cycle with `capture_start`/`capture_mark`/`capture_stop`.
+5. Schedule day-order test with `snapshot`.
+
+Record results in the tables in `docs/protocol.md` ("Open questions: experiment playbooks").
+
 ### Capturing the official app's traffic (optional)
 
 For commands the Opal only exposes via writes made by the app, capture the app itself:

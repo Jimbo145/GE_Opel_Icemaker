@@ -170,3 +170,92 @@ capture_stop:
       default: true
       selector:
         boolean:
+
+decode:
+  name: Decode value (experimental)
+  description: >-
+    Developer tool. Shows many interpretations (uint8/16/32, LE/BE, signed,
+    float, ASCII, bits, temperature unit guesses) of a hex value. No device I/O.
+  fields:
+    data:
+      name: Data
+      description: Hex bytes, e.g. "1c" or "1c 00".
+      required: true
+      example: "1c"
+      selector:
+        text:
+
+watch:
+  name: Watch characteristics (experimental)
+  description: >-
+    Developer tool, read-only. Polls the chosen characteristics and logs only
+    changes with timestamps and decoded guesses. Names accepted:
+    make_state, make_ice, light, schedule_enabled, schedule, clean_cycle,
+    ice_bin, temperature, firmware, ota_version, unknown_14ff, unknown_4fb3,
+    vendor (all characteristics of service e936877a), or any UUID.
+  fields:
+    address:
+      name: Address
+      description: Bluetooth address. Optional if only one Opal is configured.
+      selector:
+        text:
+    characteristics:
+      name: Characteristics
+      description: Names or UUIDs to watch.
+      required: true
+      example: '["unknown_14ff", "unknown_4fb3", "clean_cycle", "temperature", "make_state"]'
+      selector:
+        object:
+    duration:
+      name: Duration
+      description: Seconds to watch (5-900). Run the Opal action you are testing meanwhile.
+      default: 60
+      selector:
+        number:
+          min: 5
+          max: 900
+          mode: box
+    interval:
+      name: Interval
+      description: Seconds between reads (1-60).
+      default: 2
+      selector:
+        number:
+          min: 1
+          max: 60
+          mode: box
+    label:
+      name: Label
+      description: Free text label recorded in the log and result.
+      default: watch
+      selector:
+        text:
+
+explore_service:
+  name: Explore service (experimental)
+  description: >-
+    Developer tool, strictly read-only. Fully enumerates one GATT service
+    (default: vendor service e936877a): characteristics, properties,
+    descriptors, readable values with decodes, and notification subscription
+    attempts. Never writes.
+  fields:
+    address:
+      name: Address
+      description: Bluetooth address. Optional if only one Opal is configured.
+      selector:
+        text:
+    service:
+      name: Service UUID
+      description: Service to explore.
+      default: e936877a-8dd0-faa7-b648-f46acda1f27b
+      selector:
+        text:
+    listen_seconds:
+      name: Listen seconds
+      description: Listen for notifications after subscribing (0-120).
+      default: 10
+      selector:
+        number:
+          min: 0
+          max: 120
+          mode: box

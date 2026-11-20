@@ -23,6 +23,7 @@ _LOGGER = logging.getLogger(__name__)
 
 SERVICE_PROBE = "probe"
 SERVICE_SEND_RAW = "send_raw"
+VENDOR_SERVICE_UUID = "e936877a-8dd0-faa7-b648-f46acda1f27b"
 MAX_LISTEN_SECONDS = 120
 MAX_RAW_BYTES = 64
 
@@ -213,6 +214,10 @@ async def async_send_raw(
     if "write" not in flags and "write-without-response" not in flags:
         raise HomeAssistantError(f"Characteristic {uuid} is not writable ({flags})")
     with_response = response if response is not None else "write" in flags
+    if char.service_uuid.lower() == VENDOR_SERVICE_UUID:
+        raise HomeAssistantError(
+            "Refusing to write to the vendor service e936877a (probably OTA/DFU; a bad write can brick the device). Use ge_opal.explore_service for read-only access."
+        )
 
     async with coordinator._write_lock:
         _LOGGER.warning(

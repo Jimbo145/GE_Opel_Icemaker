@@ -59,6 +59,8 @@ class OpalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.notification_log: deque[dict[str, Any]] = deque(maxlen=200)
         self.notification_seq = 0
         self.last_probe: dict[str, Any] | None = None
+        self.last_watch: dict[str, Any] | None = None
+        self.last_explore: dict[str, Any] | None = None
         self.snapshots: dict[str, dict[str, str]] = {}
         self.capture: dict[str, Any] | None = None
         self.last_capture: dict[str, Any] | None = None
