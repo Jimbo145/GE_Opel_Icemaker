@@ -66,7 +66,7 @@ async def _async_can_read_state(
     if characteristic is None:
         return False
     try:
-        await client.read_gatt_char(characteristic)
+        await asyncio.wait_for(client.read_gatt_char(characteristic), READ_TIMEOUT)
     except Exception as err:
         if diag is not None:
             diag.setdefault('read_errors', []).append(f'{type(err).__name__}: {err}')
@@ -76,6 +76,8 @@ async def _async_can_read_state(
 
 LAST_PAIR_DIAGNOSTICS: dict[str, Any] = {}
 PAIR_ATTEMPTS = 3
+READ_TIMEOUT = 8.0
+BLEAK_PAIR_TIMEOUT = 30.0
 DROP_MARKERS = ("no matching connection", "not connected", "disconnected", "unlikely error")
 
 
@@ -107,7 +109,7 @@ async def _async_pair_with_fallbacks(
             return "link_dropped"
     diag["stage"] = "bleak_pair"
     try:
-        await client.pair()
+        await asyncio.wait_for(client.pair(), BLEAK_PAIR_TIMEOUT)
         return None
     except NotImplementedError as err:
         diag["bleak_pair_error"] = f"NotImplementedError: {err}"

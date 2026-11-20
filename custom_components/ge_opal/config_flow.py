@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 import voluptuous as vol
 
 from homeassistant import config_entries
@@ -36,6 +38,53 @@ class OpalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._discovery: bluetooth.BluetoothServiceInfoBleak | None = None
         self._discovered: dict[str, str] = {}
+        self._pair_task: asyncio.Task | None = None
+        self._pair_ctx: tuple[str, str, str] = ("user", "", "")
+        self._pair_error: str | None = None
+
+    def _take_errors(self, key: str = "base") -> dict[str, str]:
+        """Return (and clear) the error left by the last pairing attempt."""
+        errors = {key: self._pair_error} if self._pair_error else {}
+        self._pair_error = None
+        return errors
+
+    async def _start_pairing(self, return_step: str, address: str, name: str) -> FlowResult:
+        """Run connect+pair in the background so the flow step never times out."""
+        self._pair_ctx = (return_step, address, name)
+        self._pair_task = self.hass.async_create_task(
+            async_connect_and_pair(self.hass, address)
+        )
+        return self.async_show_progress(
+            step_id="pairing", progress_action="pairing", progress_task=self._pair_task
+        )
+
+    async def async_step_pairing(self, user_input: dict | None = None) -> FlowResult:
+        """Wait for the background pairing task."""
+        task = self._pair_task
+        if task is None:
+            return self.async_abort(reason="unknown")
+        if not task.done():
+            return self.async_show_progress(
+                step_id="pairing", progress_action="pairing", progress_task=task
+            )
+        try:
+            self._pair_error = task.result()
+        except asyncio.CancelledError:
+            self._pair_error = "pairing_error"
+        except Exception:
+            self._pair_error = "pairing_error"
+        return self.async_show_progress_done(next_step_id="pairing_done")
+
+    async def async_step_pairing_done(self, user_input: dict | None = None) -> FlowResult:
+        """Create the entry on success, or go back to the originating form."""
+        return_step, address, name = self._pair_ctx
+        if self._pair_error is None:
+            return await self._create_entry(address, name)
+        if return_step == "bluetooth_confirm":
+            return await self.async_step_bluetooth_confirm()
+        if return_step == "manual":
+            return await self.async_step_manual()
+        return await self.async_step_user()
 
     async def _create_entry(self, address: str, name: str) -> FlowResult:
         """Create a unique config entry."""
@@ -65,12 +114,11 @@ class OpalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Ask the user to confirm adding the discovered device."""
         assert self._discovery is not None
         name = self._discovery.name or DEFAULT_NAME
-        errors: dict[str, str] = {}
+        errors: dict[str, str] = self._take_errors()
         if user_input is not None:
-            error = await async_connect_and_pair(self.hass, self._discovery.address.upper())
-            if error is None:
-                return await self._create_entry(self._discovery.address, name)
-            errors["base"] = error
+            return await self._start_pairing(
+                "bluetooth_confirm", self._discovery.address.upper(), name
+            )
         self._set_confirm_only()
         return self.async_show_form(
             step_id="bluetooth_confirm",
@@ -83,17 +131,14 @@ class OpalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
         """Let the user pick a discovered Opal or choose manual entry."""
-        errors: dict[str, str] = {}
+        errors: dict[str, str] = self._take_errors()
         if user_input is not None:
             address = user_input[CONF_ADDRESS]
             if address == MANUAL_ENTRY:
                 return await self.async_step_manual()
-            error = await async_connect_and_pair(self.hass, address)
-            if error is None:
-                return await self._create_entry(
-                    address, self._discovered.get(address, DEFAULT_NAME)
-                )
-            errors["base"] = error
+            return await self._start_pairing(
+                "user", address, self._discovered.get(address, DEFAULT_NAME)
+            )
         else:
             current = self._async_current_ids()
             self._discovered = {
@@ -121,17 +166,14 @@ class OpalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict | None = None, no_devices: bool = False
     ) -> FlowResult:
         """Handle manual configuration by Bluetooth address."""
-        errors: dict[str, str] = {}
+        errors: dict[str, str] = self._take_errors(CONF_ADDRESS)
         if no_devices:
             errors["base"] = "no_devices_found"
         if user_input is not None:
             address = user_input[CONF_ADDRESS].strip().upper()
-            error = await async_connect_and_pair(self.hass, address)
-            if error is None:
-                return await self._create_entry(
-                    address, user_input.get(CONF_NAME, DEFAULT_NAME)
-                )
-            errors[CONF_ADDRESS] = error
+            return await self._start_pairing(
+                "manual", address, user_input.get(CONF_NAME, DEFAULT_NAME)
+            )
 
         schema = vol.Schema(
             {
