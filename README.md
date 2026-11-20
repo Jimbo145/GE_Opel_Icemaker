@@ -55,6 +55,43 @@ The runtime connection worker deliberately does not call `pair()`. If the device
 
 When the integration entry is removed, Home Assistant first unloads it (the coordinator disconnects and shuts down), then the integration makes a best-effort attempt to reconnect and call `unpair()` to remove the bond. This only runs if the Opal is currently visible and the Bluetooth backend supports unpairing; any failure is logged and never blocks removal. If it fails, remove the bond manually (`bluetoothctl remove <address>`).
 
+## Developer tools (experimental)
+
+The Opal exposes more commands and status messages than this integration uses (for example scheduled on/off). Experimental services and an extended diagnostics download help reverse-engineer them. They work on the live connection, so the Opal must be connected.
+
+- `ge_opal.snapshot`, `ge_opal.capture_start`, `ge_opal.capture_mark`, `ge_opal.capture_stop` — guided, read-only tools: labelled snapshots with byte/bit diffs, and timestamped capture sessions with notes. See the walkthrough below.
+
+- `ge_opal.probe` — enumerates every GATT service/characteristic (UUID, handle, properties, descriptors), reads every readable characteristic, and optionally listens for notifications on all notifying characteristics for `listen_seconds` (0-120). Read-only. The result is returned (use *Developer tools → Actions* with a response) and logged at INFO in hex.
+- `ge_opal.send_raw` — writes raw hex bytes (`characteristic`, `data`, e.g. `01` or `01 00 ff`, max 64 bytes) and captures notifications for `listen_seconds`, plus a readback and the decoded state. **Does nothing unless `allow_write: true`.** Every write is logged at WARNING.
+- **Diagnostics download** (Device → Download diagnostics) now includes the cached service layout, the last 200 notifications (hex, timestamped) and the last `probe` result. It performs no GATT I/O itself.
+
+Both services accept an optional `address`, needed only if several Opals are configured. The guided tools below (`snapshot`, `capture_start`/`capture_mark`/`capture_stop`) are read-only and also take `address`.
+
+### Guided reverse-engineering walkthrough
+
+Goal: work out what the Opal's other characteristics mean (e.g. scheduled on/off) with as few risky writes as possible. Record everything in [`docs/protocol.md`](docs/protocol.md).
+
+**Important:** the Opal pairs with one host at a time. The official GE app and Home Assistant cannot both be connected. To change things in the app, press *Disconnect Bluetooth* (or *Unpair*) in Home Assistant, use the app, then *Reconnect Bluetooth* (or *Re-pair*). Changes made on the Opal's own controls (buttons, lid, water) work without the app and are the easiest start.
+
+1. **Map it.** Run `ge_opal.probe` (`listen_seconds: 30`). Note every characteristic, its properties (`read`/`write`/`notify`) and its value. Paste the layout into `docs/protocol.md`.
+2. **Baseline.** Leave the Opal idle and run `ge_opal.snapshot` with `label: baseline`.
+3. **Change exactly one thing**, then snapshot again with a descriptive label (e.g. `night-mode-on`, `schedule-enabled`). The report (persistent notification, log and response) diffs it against the previous snapshot byte by byte and shows which bits flipped. Undo the change and snapshot (`label: restored`) to confirm the same bytes flip back. One variable per snapshot; repeat for power, night mode, schedule on/off, schedule times, light, and so on.
+4. **Capture live changes** for things that are hard to snapshot (transient states, notifications): `ge_opal.capture_start` (`label`), perform an action, immediately call `ge_opal.capture_mark` with a note ("pressed power", "enabled schedule 1 in app"), then `ge_opal.capture_stop`. You get a timestamped timeline of your notes, notifications (hex) and characteristic changes tagged with the latest note, plus a start-to-end diff.
+5. **Decode.** Compare against the known format: Make State is one byte (0-4), Night Mode one byte (0/1). For each changed byte decide whether it is an enum, a flag bitmask (look at the XOR bits), a counter, or a time value (try hour/minute bytes, 24h vs minutes-since-midnight, days as a 7-bit mask). Vary the value (e.g. schedule at 06:00 then 07:30) to confirm.
+6. **Test candidate writes safely**, only after steps 1-5. Prefer characteristics that the app visibly changed and that advertise `write`. Use `ge_opal.send_raw` with `allow_write: true`, change a single byte at a time, take a `snapshot` before and after, and write the original bytes back to restore. Never write while the Opal is cleaning or busy, and avoid unknown characteristics (including vendor service `e936877a-...`) unless you have seen the app change them.
+7. **Record findings** in `docs/protocol.md` with the evidence (labels, hex before/after) and a confidence level.
+
+The diagnostics download also includes stored snapshots and the last capture, so you can attach them to a bug report or share them.
+
+### Capturing the official app's traffic (optional)
+
+For commands the Opal only exposes via writes made by the app, capture the app itself:
+
+1. On an Android phone enable *Developer options → Enable Bluetooth HCI snoop log*, then toggle Bluetooth off and on.
+2. Use the GE app: connect, then perform one action at a time (note the time of each).
+3. Pull the log (`adb bugreport` or copy `btsnoop_hci.log`) and open it in Wireshark. Filter on `btatt` and look for `Write Request`/`Write Command` (app to Opal) and `Handle Value Notification` (Opal to app). Use the Opal's address (`btatt && bluetooth.addr == D8:28:C9:1B:87:35`).
+4. Map the ATT handles to UUIDs using the handle numbers in the `ge_opal.probe` output, then add the observed opcodes/bytes and the action you performed to `docs/protocol.md`. Confirm each one with `snapshot`/`capture` before relying on it.
+
 ## Testing checklist
 
 1. Confirm Home Assistant sees the Opal in Bluetooth advertisements and reports it as connectable.
