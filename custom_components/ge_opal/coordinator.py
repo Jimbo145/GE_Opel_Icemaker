@@ -56,7 +56,8 @@ class OpalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._write_lock = asyncio.Lock()
         self.notification_log: deque[dict[str, Any]] = deque(maxlen=200)
         self.notification_seq = 0
-        self.last_probe: dict[str, Any] | None = None: dict[str, list[str]] = {}
+        self.last_probe: dict[str, Any] | None = None
+        self.characteristic_properties: dict[str, list[str]] = {}
         self.raw_values: dict[str, int | None] = {
             key: None for key in READ_CHARACTERISTICS
         }
