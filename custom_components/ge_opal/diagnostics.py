@@ -8,6 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from .const import DATA_COORDINATOR, DOMAIN
 from .devtools import dump_cached_services
+from .pairing import LAST_PAIR_DIAGNOSTICS
 
 
 async def async_get_config_entry_diagnostics(
@@ -31,6 +32,7 @@ async def async_get_config_entry_diagnostics(
             "note": "Experimental. Cached service layout and notifications are recorded without extra GATT I/O; run the ge_opal.probe service to populate last_probe.",
             "cached_services": dump_cached_services(coordinator),
             "recent_notifications": list(coordinator.notification_log),
+            "last_pair_attempt": dict(LAST_PAIR_DIAGNOSTICS),
             "last_probe": coordinator.last_probe,
             "last_watch": coordinator.last_watch,
             "last_explore": coordinator.last_explore,
