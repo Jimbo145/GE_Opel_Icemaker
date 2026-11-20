@@ -19,6 +19,7 @@ ERROR_MESSAGES = {
     "not_an_opal": "Connected, but the device does not expose the Opal service.",
     "pairing_failed": "Pairing failed. Put the Opal in pairing mode, make sure it is not bonded to another host or the GE app, and check the log for 'Opal pairing diagnostics'.",
     "pairing_proxy": "The Opal was reached through a Bluetooth proxy, which cannot pair it. Use the host Bluetooth adapter.",
+    "pairing_error": "Unexpected error while pairing. See the Home Assistant log (logger custom_components.ge_opal.pairing).",
     "pairing_unsupported": "This Bluetooth adapter or proxy cannot pair. Use a local Bluetooth adapter on the Home Assistant host.",
     "unpair_failed": "Could not remove the Bluetooth bond from the Opal.",
 }
@@ -108,6 +109,21 @@ async def _async_pair_with_fallbacks(
 
 
 async def async_connect_and_pair(
+    hass: HomeAssistant, address: str, force_pair: bool = False
+) -> str | None:
+    """Never raise: log the full traceback and map to an error key."""
+    try:
+        return await _async_connect_and_pair(hass, address, force_pair)
+    except Exception as err:
+        LAST_PAIR_DIAGNOSTICS["unhandled_exception"] = f"{type(err).__name__}: {err}"
+        _LOGGER.exception(
+            "Opal pairing crashed for %s (%s); diagnostics: %s",
+            address, type(err).__name__, LAST_PAIR_DIAGNOSTICS,
+        )
+        return "pairing_error"
+
+
+async def _async_connect_and_pair(
     hass: HomeAssistant, address: str, force_pair: bool = False
 ) -> str | None:
     """Connect, pairing if needed (or when forced); return an error key or None."""
