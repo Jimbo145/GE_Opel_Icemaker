@@ -40,9 +40,11 @@ The two buttons stay available while the device is disconnected. The disconnecte
 
 ## Pairing note
 
-The user successfully paired/bonded this Opal using BlueZ `bluetoothctl`, with an interactive pairing confirmation. The ESPHome configuration used passkey `000000`, but the Home Assistant integration does not install a custom BlueZ pairing agent or force a pairing operation. Pair the Opal on the same Linux/BlueZ host that runs Home Assistant if pairing is required. Pairing performed on a separate laptop does not create a bond on the Home Assistant host. If Home Assistant runs in HA OS, use its host-level Bluetooth/BlueZ pairing route rather than assuming a shell in another computer shares the same adapter.
+This integration verifies the connection during setup: before an entry is created, the config flow connects to the selected Opal, checks the Opal GATT service, and reads Make State. If that read is rejected (usually because the device is not bonded), it calls `pair()` once and retries. If connecting or pairing fails, the form shows an error and no entry is created. Pairing needs a backend that supports it (BlueZ on the HA host); some Bluetooth proxies cannot pair, in which case pair via the host first. After setup, the integration does not pair again on its own.
 
-This implementation deliberately does not call `pair()` on setup. This avoids silently initiating an interactive pairing operation from Home Assistant, which cannot reliably answer a passkey prompt across all supported Bluetooth backends. If the device is not already bonded and rejects protected GATT operations, pre-pair it through the host's supported Bluetooth tooling first.
+The user successfully paired/bonded this Opal using BlueZ `bluetoothctl`, with an interactive pairing confirmation. The ESPHome configuration used passkey `000000`, but the Home Assistant integration does not install a custom BlueZ pairing agent, so passkey prompts are not answered automatically. Pair the Opal on the same Linux/BlueZ host that runs Home Assistant if the setup-time pairing attempt fails. Pairing performed on a separate laptop does not create a bond on the Home Assistant host. If Home Assistant runs in HA OS, use its host-level Bluetooth/BlueZ pairing route rather than assuming a shell in another computer shares the same adapter.
+
+The runtime connection worker deliberately does not call `pair()`. If the device is not already bonded and rejects protected GATT operations, pre-pair it through the host's supported Bluetooth tooling first.
 
 ## Testing checklist
 

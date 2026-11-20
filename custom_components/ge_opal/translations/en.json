@@ -24,7 +24,11 @@
     },
     "error": {
       "no_devices_found": "No Opal ice makers were found in Bluetooth range. Make sure it is powered, not connected to another client (such as the phone app), and within range of a connectable adapter or proxy, then try again or enter the address below.",
-      "device_not_found": "The device is not currently visible to Home Assistant Bluetooth. Move it closer or check the adapter/proxy."
+      "device_not_found": "The device is not currently visible to Home Assistant Bluetooth. Move it closer or check the adapter/proxy.",
+      "cannot_connect": "Could not connect to the device. Make sure it is powered and not connected to another client (such as the phone app), then try again.",
+      "not_an_opal": "Connected, but this device does not expose the Opal service.",
+      "pairing_failed": "The device rejected access and pairing failed. Put the Opal in pairing mode and try again, or pair it on the Home Assistant host with bluetoothctl first.",
+      "pairing_unsupported": "The device requires pairing, which this Bluetooth adapter or proxy cannot do. Pair it on the Home Assistant host with bluetoothctl, then retry."
           },
           "abort": {
             "already_configured": "This device is already configured.",
