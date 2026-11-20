@@ -28,7 +28,7 @@ Only Make State was positively verified to advertise `read` and `notify` in the 
 - Switch: Make Ice (state follows Make State == 1)
 - Switch: Schedule Enabled (`b45163b3-1092-4725-95dc-1a43ac4a9b88`, found in the official app; see [`docs/protocol.md`](docs/protocol.md) for the app-derived protocol notes, including the 24-byte schedule payload which is not yet exposed)
 
-The two buttons stay available while the device is disconnected. The disconnected state is not persisted: it resets to connected when Home Assistant restarts or the entry is reloaded.
+The Unpair and Re-pair buttons stay available while the device is disconnected. The paused state is not persisted: it resets to connected when Home Assistant restarts or the entry is reloaded.
 
 Diagnostic buttons (for when the Opal is bonded to another host, since it can only be paired to one device at a time):
 
