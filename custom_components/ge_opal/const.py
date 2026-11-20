@@ -19,6 +19,8 @@ CHAR_ICE_BIN_STATE: Final = "5bcbf6b1-de80-94b6-0f4b-99fb984707b6"
 CHAR_NIGHT_MODE: Final = "37988f00-ea39-4a2d-9983-afad6535c02e"
 CHAR_CLEANING_PHASE: Final = "efe4bd77-0600-47d7-b3f6-dc81af0d9aaf"
 CHAR_MAKE_ICE_CONTROL: Final = "79994230-4b04-40cd-85c9-02dd1a8d4dd0"
+# Found in the official app (see docs/protocol.md): one byte, 1 = schedule on.
+CHAR_SCHEDULE_ENABLE: Final = "b45163b3-1092-4725-95dc-1a43ac4a9b88"
 
 # The original ESPHome implementation maps the first byte of these values.
 MAKE_STATE_NAMES: Final = {

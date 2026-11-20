@@ -21,6 +21,7 @@ from .const import (
     CHAR_MAKE_ICE_CONTROL,
     CHAR_MAKE_STATE,
     CHAR_NIGHT_MODE,
+    CHAR_SCHEDULE_ENABLE,
     CONNECT_TIMEOUT,
     GATT_SERVICE_UUID,
     ICE_BIN_NAMES,
@@ -37,6 +38,7 @@ READ_CHARACTERISTICS = {
     "ice_bin_state": CHAR_ICE_BIN_STATE,
     "night_mode": CHAR_NIGHT_MODE,
     "cleaning_phase": CHAR_CLEANING_PHASE,
+    "schedule_enabled": CHAR_SCHEDULE_ENABLE,
 }
 
 

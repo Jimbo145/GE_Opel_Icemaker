@@ -26,6 +26,7 @@ Only Make State was positively verified to advertise `read` and `notify` in the 
 - Sensor: Cleaning Phase (raw numeric diagnostic)
 - Switch: Night Mode
 - Switch: Make Ice (state follows Make State == 1)
+- Switch: Schedule Enabled (`b45163b3-1092-4725-95dc-1a43ac4a9b88`, found in the official app; see [`docs/protocol.md`](docs/protocol.md) for the app-derived protocol notes, including the 24-byte schedule payload which is not yet exposed)
 - Button: Disconnect Bluetooth (drops the connection and stops auto-reconnecting, freeing the Opal for another client such as the phone app)
 - Button: Reconnect Bluetooth (resumes the connection worker and connects immediately)
 
