@@ -9,6 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from .const import (
     CHAR_MAKE_ICE_CONTROL,
     CHAR_NIGHT_MODE,
+    CHAR_SCHEDULE_ENABLE,
     DATA_COORDINATOR,
     DOMAIN,
 )
@@ -21,7 +22,34 @@ async def async_setup_entry(
 ) -> None:
     """Set up Opal switches."""
     coordinator: OpalCoordinator = hass.data[DOMAIN][entry.entry_id][DATA_COORDINATOR]
-    async_add_entities([OpalNightModeSwitch(coordinator), OpalMakeIceSwitch(coordinator)])
+    async_add_entities(
+        [
+            OpalNightModeSwitch(coordinator),
+            OpalMakeIceSwitch(coordinator),
+            OpalScheduleSwitch(coordinator),
+        ]
+    )
+
+
+class OpalScheduleSwitch(OpalEntity, SwitchEntity):
+    """Enable or disable the Opal's weekly on/off schedule."""
+
+    _attr_name = "Schedule Enabled"
+    _attr_icon = "mdi:calendar-clock"
+
+    def __init__(self, coordinator: OpalCoordinator) -> None:
+        super().__init__(coordinator, "schedule_enabled")
+
+    @property
+    def is_on(self) -> bool | None:
+        value = self.coordinator.data.get("schedule_enabled")
+        return bool(value) if value is not None else None
+
+    async def async_turn_on(self, **kwargs) -> None:
+        await self.coordinator.async_write(CHAR_SCHEDULE_ENABLE, 1)
+
+    async def async_turn_off(self, **kwargs) -> None:
+        await self.coordinator.async_write(CHAR_SCHEDULE_ENABLE, 0)
 
 
 class OpalNightModeSwitch(OpalEntity, SwitchEntity):

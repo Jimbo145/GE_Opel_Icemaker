@@ -26,6 +26,7 @@ Only Make State was positively verified to advertise `read` and `notify` in the 
 - Sensor: Cleaning Phase (raw numeric diagnostic)
 - Switch: Night Mode
 - Switch: Make Ice (state follows Make State == 1)
+- Switch: Schedule Enabled (`b45163b3-1092-4725-95dc-1a43ac4a9b88`, found in the official app; see [`docs/protocol.md`](docs/protocol.md) for the app-derived protocol notes, including the 24-byte schedule payload which is not yet exposed)
 - Button: Disconnect Bluetooth (drops the connection and stops auto-reconnecting, freeing the Opal for another client such as the phone app)
 - Button: Reconnect Bluetooth (resumes the connection worker and connects immediately)
 
@@ -82,6 +83,24 @@ Goal: work out what the Opal's other characteristics mean (e.g. scheduled on/off
 7. **Record findings** in `docs/protocol.md` with the evidence (labels, hex before/after) and a confidence level.
 
 The diagnostics download also includes stored snapshots and the last capture, so you can attach them to a bug report or share them.
+
+### Exploring the remaining unknowns (read-only)
+
+Extra developer services (all read-only; writes to the vendor/OTA service are refused):
+
+- `ge_opal.decode` – shows many interpretations of a hex value (ints, floats, ASCII, bits, temperature guesses).
+- `ge_opal.watch` – polls chosen characteristics (`unknown_14ff`, `unknown_4fb3`, `clean_cycle`, `temperature`, `make_state`, `ice_bin`, `vendor`, or any UUID) and logs only changes with timestamps and decoded guesses.
+- `ge_opal.explore_service` – fully enumerates a service (default vendor service `e936877a`): properties, descriptors, values, notification subscription.
+
+Recommended order:
+
+1. `explore_service` (vendor service), once.
+2. `watch` on `unknown_14ff`, `unknown_4fb3`, `make_state`, `ice_bin` while idle, making ice, bin removed.
+3. `watch` on `temperature` at several known conditions; compare with the app/display.
+4. Clean cycle with `capture_start`/`capture_mark`/`capture_stop`.
+5. Schedule day-order test with `snapshot`.
+
+Record results in the tables in `docs/protocol.md` ("Open questions: experiment playbooks").
 
 ### Capturing the official app's traffic (optional)
 
