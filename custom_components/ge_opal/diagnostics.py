@@ -7,6 +7,7 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from .const import DATA_COORDINATOR, DOMAIN
+from .devtools import dump_cached_services
 
 
 async def async_get_config_entry_diagnostics(
@@ -26,6 +27,12 @@ async def async_get_config_entry_diagnostics(
             ),
         },
         "state": dict(coordinator.raw_values),
+        "developer": {
+            "note": "Experimental. Cached service layout and notifications are recorded without extra GATT I/O; run the ge_opal.probe service to populate last_probe.",
+            "cached_services": dump_cached_services(coordinator),
+            "recent_notifications": list(coordinator.notification_log),
+            "last_probe": coordinator.last_probe,
+        },
         "characteristic_properties": dict(coordinator.characteristic_properties),
         "protocol": {
             "gatt_service_uuid": "3e6763c5-9429-40cc-909e-bebf8c7487be",

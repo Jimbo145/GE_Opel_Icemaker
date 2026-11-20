@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections import deque
 from typing import Any
 
 from bleak_retry_connector import BleakClientWithServiceCache, establish_connection
@@ -12,6 +13,7 @@ from homeassistant.components import bluetooth
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.util import dt as dt_util
 
 from .const import (
     CHAR_CLEANING_PHASE,
@@ -52,7 +54,9 @@ class OpalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.paused = False
         self._wake_event = asyncio.Event()
         self._write_lock = asyncio.Lock()
-        self.characteristic_properties: dict[str, list[str]] = {}
+        self.notification_log: deque[dict[str, Any]] = deque(maxlen=200)
+        self.notification_seq = 0
+        self.last_probe: dict[str, Any] | None = None: dict[str, list[str]] = {}
         self.raw_values: dict[str, int | None] = {
             key: None for key in READ_CHARACTERISTICS
         }
@@ -131,9 +135,22 @@ class OpalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def _notification_callback(self, key: str):
         """Build a Bleak notification callback."""
-        def _callback(_sender: BleakGATTCharacteristic, data: bytearray) -> None:
+        def _callback(sender: BleakGATTCharacteristic, data: bytearray) -> None:
+            self.log_notification(sender.uuid, data)
             self._publish(key, self._first_byte(data))
         return _callback
+
+    def log_notification(self, uuid: str, data: bytes | bytearray) -> None:
+        """Record a notification (hex) for developer diagnostics."""
+        self.notification_seq += 1
+        entry = {
+            "seq": self.notification_seq,
+            "time": dt_util.utcnow().isoformat(),
+            "characteristic": str(uuid).lower(),
+            "hex": bytes(data).hex(" "),
+        }
+        self.notification_log.append(entry)
+        _LOGGER.debug("Opal notification %s: %s", entry["characteristic"], entry["hex"])
 
     async def _read_available(self) -> None:
         """Read supported state characteristics without writing anything."""

@@ -55,6 +55,23 @@ The runtime connection worker deliberately does not call `pair()`. If the device
 
 When the integration entry is removed, Home Assistant first unloads it (the coordinator disconnects and shuts down), then the integration makes a best-effort attempt to reconnect and call `unpair()` to remove the bond. This only runs if the Opal is currently visible and the Bluetooth backend supports unpairing; any failure is logged and never blocks removal. If it fails, remove the bond manually (`bluetoothctl remove <address>`).
 
+## Developer tools (experimental)
+
+The Opal exposes more commands and status messages than this integration uses (for example scheduled on/off). Two experimental services and an extended diagnostics download help reverse-engineer them. They work on the live connection, so the Opal must be connected.
+
+- `ge_opal.probe` — enumerates every GATT service/characteristic (UUID, handle, properties, descriptors), reads every readable characteristic, and optionally listens for notifications on all notifying characteristics for `listen_seconds` (0-120). Read-only. The result is returned (use *Developer tools → Actions* with a response) and logged at INFO in hex.
+- `ge_opal.send_raw` — writes raw hex bytes (`characteristic`, `data`, e.g. `01` or `01 00 ff`, max 64 bytes) and captures notifications for `listen_seconds`, plus a readback and the decoded state. **Does nothing unless `allow_write: true`.** Every write is logged at WARNING.
+- **Diagnostics download** (Device → Download diagnostics) now includes the cached service layout, the last 200 notifications (hex, timestamped) and the last `probe` result. It performs no GATT I/O itself.
+
+Both services accept an optional `address`, needed only if several Opals are configured.
+
+Suggested workflow for scheduled on/off:
+
+1. Run `ge_opal.probe` with `listen_seconds: 60` to list all characteristics and which ones support write/notify. Save the output.
+2. Set or change a schedule in the vendor phone app **while the probe is listening** (disconnect the app afterwards, or use *Unpair/Re-pair* to move the bond back to Home Assistant; the Opal pairs with one host at a time). Compare notification/read hex values before and after to find which characteristic changes.
+3. Make one small change at a time (e.g. enable only a single schedule slot) and diff the hex to infer the byte layout.
+4. Replay candidates with `ge_opal.send_raw` and `allow_write: true`, one characteristic at a time, checking the readback/notifications. Only write to characteristics you have observed the app change, and avoid doing so while the machine is cleaning or busy. Unknown writes can change device settings.
+
 ## Testing checklist
 
 1. Confirm Home Assistant sees the Opal in Bluetooth advertisements and reports it as connectable.

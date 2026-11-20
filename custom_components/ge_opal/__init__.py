@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant
 
 from .const import CONF_ADDRESS, DATA_COORDINATOR, DOMAIN, PLATFORMS
 from .coordinator import OpalCoordinator
+from .devtools import async_register_services
 from .pairing import async_unpair
 
 _LOGGER = logging.getLogger(__name__)
@@ -16,6 +17,7 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the integration domain."""
+    async_register_services(hass)
     return True
 
 

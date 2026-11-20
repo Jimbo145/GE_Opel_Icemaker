@@ -1,0 +1,74 @@
+probe:
+  name: Probe (experimental)
+  description: >-
+    Developer tool. Enumerates every GATT service and characteristic on the
+    connected Opal, reads all readable characteristics (hex), and optionally
+    listens for notifications. Read-only; the result is returned and logged.
+  fields:
+    address:
+      name: Address
+      description: Bluetooth address. Optional if only one Opal is configured.
+      example: "D8:28:C9:1B:87:35"
+      selector:
+        text:
+    read_values:
+      name: Read values
+      description: Read every readable characteristic.
+      default: true
+      selector:
+        boolean:
+    listen_seconds:
+      name: Listen seconds
+      description: Subscribe to all notifying characteristics for this long (0-120).
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 120
+          mode: box
+
+send_raw:
+  name: Send raw (experimental)
+  description: >-
+    Developer tool. Writes raw hex bytes to a characteristic and captures the
+    response/notifications. Can change device behaviour; requires allow_write.
+  fields:
+    address:
+      name: Address
+      description: Bluetooth address. Optional if only one Opal is configured.
+      selector:
+        text:
+    characteristic:
+      name: Characteristic UUID
+      description: Full UUID of a writable characteristic.
+      required: true
+      example: "79994230-4b04-40cd-85c9-02dd1a8d4dd0"
+      selector:
+        text:
+    data:
+      name: Data (hex)
+      description: Bytes to write, in hex.
+      required: true
+      example: "01"
+      selector:
+        text:
+    allow_write:
+      name: Allow write
+      description: Must be enabled to actually send the command.
+      default: false
+      selector:
+        boolean:
+    response:
+      name: Write with response
+      description: Force write-with-response (default follows the characteristic flags).
+      selector:
+        boolean:
+    listen_seconds:
+      name: Listen seconds
+      description: How long to capture notifications after the write (0-120).
+      default: 3
+      selector:
+        number:
+          min: 0
+          max: 120
+          mode: box
