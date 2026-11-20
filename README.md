@@ -27,8 +27,6 @@ Only Make State was positively verified to advertise `read` and `notify` in the 
 - Switch: Night Mode
 - Switch: Make Ice (state follows Make State == 1)
 - Switch: Schedule Enabled (`b45163b3-1092-4725-95dc-1a43ac4a9b88`, found in the official app; see [`docs/protocol.md`](docs/protocol.md) for the app-derived protocol notes, including the 24-byte schedule payload which is not yet exposed)
-- Button: Disconnect Bluetooth (drops the connection and stops auto-reconnecting, freeing the Opal for another client such as the phone app)
-- Button: Reconnect Bluetooth (resumes the connection worker and connects immediately)
 
 The two buttons stay available while the device is disconnected. The disconnected state is not persisted: it resets to connected when Home Assistant restarts or the entry is reloaded.
 
@@ -74,7 +72,7 @@ Both services accept an optional `address`, needed only if several Opals are con
 
 Goal: work out what the Opal's other characteristics mean (e.g. scheduled on/off) with as few risky writes as possible. Record everything in [`docs/protocol.md`](docs/protocol.md).
 
-**Important:** the Opal pairs with one host at a time. The official GE app and Home Assistant cannot both be connected. To change things in the app, press *Disconnect Bluetooth* (or *Unpair*) in Home Assistant, use the app, then *Reconnect Bluetooth* (or *Re-pair*). Changes made on the Opal's own controls (buttons, lid, water) work without the app and are the easiest start.
+**Important:** the Opal pairs with one host at a time. The official GE app and Home Assistant cannot both be connected. To change things in the app, press *Unpair* in Home Assistant, use the app, then *Re-pair*. Changes made on the Opal's own controls (buttons, lid, water) work without the app and are the easiest start.
 
 1. **Map it.** Run `ge_opal.probe` (`listen_seconds: 30`). Note every characteristic, its properties (`read`/`write`/`notify`) and its value. Paste the layout into `docs/protocol.md`.
 2. **Baseline.** Leave the Opal idle and run `ge_opal.snapshot` with `label: baseline`.

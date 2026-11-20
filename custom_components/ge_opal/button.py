@@ -19,8 +19,6 @@ async def async_setup_entry(
     coordinator: OpalCoordinator = hass.data[DOMAIN][entry.entry_id][DATA_COORDINATOR]
     async_add_entities(
         [
-            OpalDisconnectButton(coordinator),
-            OpalReconnectButton(coordinator),
             OpalUnpairButton(coordinator),
             OpalRepairButton(coordinator),
         ]
@@ -33,32 +31,6 @@ class _OpalConnectionButton(OpalEntity, ButtonEntity):
     @property
     def available(self) -> bool:
         return True
-
-
-class OpalDisconnectButton(_OpalConnectionButton):
-    """Disconnect Bluetooth and stop auto-reconnecting."""
-
-    _attr_name = "Disconnect Bluetooth"
-    _attr_icon = "mdi:bluetooth-off"
-
-    def __init__(self, coordinator: OpalCoordinator) -> None:
-        super().__init__(coordinator, "disconnect_bluetooth")
-
-    async def async_press(self) -> None:
-        await self.coordinator.async_disconnect_bluetooth()
-
-
-class OpalReconnectButton(_OpalConnectionButton):
-    """Resume Bluetooth connection."""
-
-    _attr_name = "Reconnect Bluetooth"
-    _attr_icon = "mdi:bluetooth-connect"
-
-    def __init__(self, coordinator: OpalCoordinator) -> None:
-        super().__init__(coordinator, "reconnect_bluetooth")
-
-    async def async_press(self) -> None:
-        await self.coordinator.async_reconnect_bluetooth()
 
 
 class OpalUnpairButton(_OpalConnectionButton):
