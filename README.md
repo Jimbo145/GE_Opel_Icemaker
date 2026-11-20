@@ -31,6 +31,13 @@ Only Make State was positively verified to advertise `read` and `notify` in the 
 
 The two buttons stay available while the device is disconnected. The disconnected state is not persisted: it resets to connected when Home Assistant restarts or the entry is reloaded.
 
+Diagnostic buttons (for when the Opal is bonded to another host, since it can only be paired to one device at a time):
+
+- Button: Unpair (disconnects, stops auto-reconnecting, and removes the Bluetooth bond so another host or the phone app can pair with the Opal)
+- Button: Re-pair (unpairs, reconnects, and pairs again with this Home Assistant host, then resumes normal operation)
+
+Both show an error in the UI if the Opal is out of range, cannot be connected, or pairing fails or is unsupported by the adapter/proxy. They reuse the same connect/pair logic as the config flow (`pairing.py`). Put the Opal in pairing mode before using Re-pair.
+
 ## Installation
 
 1. Copy `custom_components/ge_opal` into the Home Assistant configuration directory so the final path is `<config>/custom_components/ge_opal/`.
@@ -40,9 +47,13 @@ The two buttons stay available while the device is disconnected. The disconnecte
 
 ## Pairing note
 
-The user successfully paired/bonded this Opal using BlueZ `bluetoothctl`, with an interactive pairing confirmation. The ESPHome configuration used passkey `000000`, but the Home Assistant integration does not install a custom BlueZ pairing agent or force a pairing operation. Pair the Opal on the same Linux/BlueZ host that runs Home Assistant if pairing is required. Pairing performed on a separate laptop does not create a bond on the Home Assistant host. If Home Assistant runs in HA OS, use its host-level Bluetooth/BlueZ pairing route rather than assuming a shell in another computer shares the same adapter.
+This integration verifies the connection during setup: before an entry is created, the config flow connects to the selected Opal, checks the Opal GATT service, and reads Make State. If that read is rejected (usually because the device is not bonded), it calls `pair()` once and retries. If connecting or pairing fails, the form shows an error and no entry is created. Pairing needs a backend that supports it (BlueZ on the HA host); some Bluetooth proxies cannot pair, in which case pair via the host first. After setup, the integration does not pair again on its own.
 
-This implementation deliberately does not call `pair()` on setup. This avoids silently initiating an interactive pairing operation from Home Assistant, which cannot reliably answer a passkey prompt across all supported Bluetooth backends. If the device is not already bonded and rejects protected GATT operations, pre-pair it through the host's supported Bluetooth tooling first.
+The user successfully paired/bonded this Opal using BlueZ `bluetoothctl`, with an interactive pairing confirmation. The ESPHome configuration used passkey `000000`, but the Home Assistant integration does not install a custom BlueZ pairing agent, so passkey prompts are not answered automatically. Pair the Opal on the same Linux/BlueZ host that runs Home Assistant if the setup-time pairing attempt fails. Pairing performed on a separate laptop does not create a bond on the Home Assistant host. If Home Assistant runs in HA OS, use its host-level Bluetooth/BlueZ pairing route rather than assuming a shell in another computer shares the same adapter.
+
+The runtime connection worker deliberately does not call `pair()`. If the device is not already bonded and rejects protected GATT operations, pre-pair it through the host's supported Bluetooth tooling first.
+
+When the integration entry is removed, Home Assistant first unloads it (the coordinator disconnects and shuts down), then the integration makes a best-effort attempt to reconnect and call `unpair()` to remove the bond. This only runs if the Opal is currently visible and the Bluetooth backend supports unpairing; any failure is logged and never blocks removal. If it fails, remove the bond manually (`bluetoothctl remove <address>`).
 
 ## Testing checklist
 

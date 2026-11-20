@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import logging
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import CONF_ADDRESS, DATA_COORDINATOR, DOMAIN, PLATFORMS
 from .coordinator import OpalCoordinator
+from .pairing import async_unpair
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
@@ -34,3 +39,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not hass.data[DOMAIN]:
         hass.data.pop(DOMAIN)
     return True
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Best-effort removal of the Bluetooth bond when the entry is deleted."""
+    address = entry.data[CONF_ADDRESS]
+    error = await async_unpair(hass, address)
+    if error is None:
+        _LOGGER.info("Removed Bluetooth bond for GE Opal %s", address)
+    else:
+        _LOGGER.warning("Could not unpair GE Opal %s: %s", address, error)

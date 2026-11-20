@@ -11,6 +11,10 @@
     {
       "service_uuid": "e2779da7-0a82-4be7-b754-31ed3e727253",
       "connectable": true
+    },
+    {
+      "local_name": "OPAL*",
+      "connectable": true
     }
   ]
 }

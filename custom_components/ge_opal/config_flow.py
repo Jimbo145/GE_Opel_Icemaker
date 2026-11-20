@@ -14,9 +14,18 @@ from .const import (
     CONF_ADDRESS,
     DEFAULT_NAME,
     DOMAIN,
+    OPAL_NAME_PREFIX,
 )
+from .pairing import async_connect_and_pair
 
 MANUAL_ENTRY = "manual"
+
+
+def _is_opal(info: bluetooth.BluetoothServiceInfoBleak) -> bool:
+    """Match the manifest bluetooth matchers: service UUID or OPAL local name."""
+    return ADVERTISEMENT_SERVICE_UUID in (
+        uuid.lower() for uuid in info.service_uuids
+    ) or (info.name or "").upper().startswith(OPAL_NAME_PREFIX)
 
 
 class OpalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -56,8 +65,12 @@ class OpalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Ask the user to confirm adding the discovered device."""
         assert self._discovery is not None
         name = self._discovery.name or DEFAULT_NAME
+        errors: dict[str, str] = {}
         if user_input is not None:
-            return await self._create_entry(self._discovery.address, name)
+            error = await async_connect_and_pair(self.hass, self._discovery.address.upper())
+            if error is None:
+                return await self._create_entry(self._discovery.address, name)
+            errors["base"] = error
         self._set_confirm_only()
         return self.async_show_form(
             step_id="bluetooth_confirm",
@@ -65,29 +78,33 @@ class OpalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "name": name,
                 "address": self._discovery.address.upper(),
             },
+            errors=errors,
         )
 
     async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
         """Let the user pick a discovered Opal or choose manual entry."""
+        errors: dict[str, str] = {}
         if user_input is not None:
             address = user_input[CONF_ADDRESS]
             if address == MANUAL_ENTRY:
                 return await self.async_step_manual()
-            return await self._create_entry(
-                address, self._discovered.get(address, DEFAULT_NAME)
-            )
-
-        current = self._async_current_ids()
-        self._discovered = {
-            info.address.upper(): info.name or DEFAULT_NAME
-            for info in bluetooth.async_discovered_service_info(
-                self.hass, connectable=True
-            )
-            if ADVERTISEMENT_SERVICE_UUID in info.service_uuids
-            and info.address.upper() not in current
-        }
-        if not self._discovered:
-            return await self.async_step_manual()
+            error = await async_connect_and_pair(self.hass, address)
+            if error is None:
+                return await self._create_entry(
+                    address, self._discovered.get(address, DEFAULT_NAME)
+                )
+            errors["base"] = error
+        else:
+            current = self._async_current_ids()
+            self._discovered = {
+                info.address.upper(): info.name or DEFAULT_NAME
+                for info in bluetooth.async_discovered_service_info(
+                    self.hass, connectable=True
+                )
+                if _is_opal(info) and info.address.upper() not in current
+            }
+            if not self._discovered:
+                return await self.async_step_manual(no_devices=True)
 
         options = {
             address: f"{name} ({address})"
@@ -97,21 +114,24 @@ class OpalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({vol.Required(CONF_ADDRESS): vol.In(options)}),
+            errors=errors,
         )
 
-    async def async_step_manual(self, user_input: dict | None = None) -> FlowResult:
+    async def async_step_manual(
+        self, user_input: dict | None = None, no_devices: bool = False
+    ) -> FlowResult:
         """Handle manual configuration by Bluetooth address."""
         errors: dict[str, str] = {}
+        if no_devices:
+            errors["base"] = "no_devices_found"
         if user_input is not None:
             address = user_input[CONF_ADDRESS].strip().upper()
-            if not bluetooth.async_ble_device_from_address(
-                self.hass, address, connectable=True
-            ):
-                errors[CONF_ADDRESS] = "device_not_found"
-            else:
+            error = await async_connect_and_pair(self.hass, address)
+            if error is None:
                 return await self._create_entry(
                     address, user_input.get(CONF_NAME, DEFAULT_NAME)
                 )
+            errors[CONF_ADDRESS] = error
 
         schema = vol.Schema(
             {
