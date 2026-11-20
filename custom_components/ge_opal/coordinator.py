@@ -10,6 +10,7 @@ from bleak_retry_connector import BleakClientWithServiceCache, establish_connect
 from bleak.backends.characteristic import BleakGATTCharacteristic
 from homeassistant.components import bluetooth
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
@@ -25,6 +26,7 @@ from .const import (
     POLL_INTERVAL,
     RECONNECT_DELAY,
 )
+from .pairing import ERROR_MESSAGES, async_connect_and_pair, async_unpair
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -96,6 +98,26 @@ class OpalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.paused = False
         self._wake_event.set()
         self.async_update_listeners()
+
+    async def async_unpair(self) -> None:
+        """Disconnect, stop reconnecting, and remove the Bluetooth bond."""
+        await self.async_disconnect_bluetooth()
+        error = await async_unpair(self.hass, self.address)
+        if error is not None:
+            raise HomeAssistantError(ERROR_MESSAGES[error])
+
+    async def async_repair(self) -> None:
+        """Unpair, then reconnect and pair again, then resume the worker."""
+        await self.async_disconnect_bluetooth()
+        error = await async_unpair(self.hass, self.address)
+        if error is not None:
+            raise HomeAssistantError(ERROR_MESSAGES[error])
+        error = await async_connect_and_pair(
+            self.hass, self.address, force_pair=True
+        )
+        if error is not None:
+            raise HomeAssistantError(ERROR_MESSAGES[error])
+        await self.async_reconnect_bluetooth()
 
     @staticmethod
     def _first_byte(data: bytearray | bytes) -> int | None:

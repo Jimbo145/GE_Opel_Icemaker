@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import logging
 
-from bleak_retry_connector import BleakClientWithServiceCache, establish_connection
-from homeassistant.components import bluetooth
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import CONF_ADDRESS, CONNECT_TIMEOUT, DATA_COORDINATOR, DOMAIN, PLATFORMS
+from .const import CONF_ADDRESS, DATA_COORDINATOR, DOMAIN, PLATFORMS
 from .coordinator import OpalCoordinator
+from .pairing import async_unpair
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -45,28 +44,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Best-effort removal of the Bluetooth bond when the entry is deleted."""
     address = entry.data[CONF_ADDRESS]
-    device = bluetooth.async_ble_device_from_address(hass, address, connectable=True)
-    if device is None:
-        _LOGGER.debug("Opal %s not reachable; leaving any bond in place", address)
-        return
-    client = None
-    try:
-        client = await establish_connection(
-            BleakClientWithServiceCache,
-            device,
-            name="GE Opal Ice Maker",
-            max_attempts=2,
-            timeout=CONNECT_TIMEOUT,
-        )
-        await client.unpair()
+    error = await async_unpair(hass, address)
+    if error is None:
         _LOGGER.info("Removed Bluetooth bond for GE Opal %s", address)
-    except NotImplementedError:
-        _LOGGER.debug("Bluetooth backend cannot unpair Opal %s", address)
-    except Exception:
-        _LOGGER.warning("Could not unpair GE Opal %s", address, exc_info=True)
-    finally:
-        if client is not None:
-            try:
-                await client.disconnect()
-            except Exception:
-                _LOGGER.debug("Error disconnecting after unpair", exc_info=True)
+    else:
+        _LOGGER.warning("Could not unpair GE Opal %s: %s", address, error)

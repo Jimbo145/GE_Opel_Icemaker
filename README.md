@@ -31,6 +31,13 @@ Only Make State was positively verified to advertise `read` and `notify` in the 
 
 The two buttons stay available while the device is disconnected. The disconnected state is not persisted: it resets to connected when Home Assistant restarts or the entry is reloaded.
 
+Diagnostic buttons (for when the Opal is bonded to another host, since it can only be paired to one device at a time):
+
+- Button: Unpair (disconnects, stops auto-reconnecting, and removes the Bluetooth bond so another host or the phone app can pair with the Opal)
+- Button: Re-pair (unpairs, reconnects, and pairs again with this Home Assistant host, then resumes normal operation)
+
+Both show an error in the UI if the Opal is out of range, cannot be connected, or pairing fails or is unsupported by the adapter/proxy. They reuse the same connect/pair logic as the config flow (`pairing.py`). Put the Opal in pairing mode before using Re-pair.
+
 ## Installation
 
 1. Copy `custom_components/ge_opal` into the Home Assistant configuration directory so the final path is `<config>/custom_components/ge_opal/`.
