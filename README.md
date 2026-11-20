@@ -46,6 +46,8 @@ The user successfully paired/bonded this Opal using BlueZ `bluetoothctl`, with a
 
 The runtime connection worker deliberately does not call `pair()`. If the device is not already bonded and rejects protected GATT operations, pre-pair it through the host's supported Bluetooth tooling first.
 
+When the integration entry is removed, Home Assistant first unloads it (the coordinator disconnects and shuts down), then the integration makes a best-effort attempt to reconnect and call `unpair()` to remove the bond. This only runs if the Opal is currently visible and the Bluetooth backend supports unpairing; any failure is logged and never blocks removal. If it fails, remove the bond manually (`bluetoothctl remove <address>`).
+
 ## Testing checklist
 
 1. Confirm Home Assistant sees the Opal in Bluetooth advertisements and reports it as connectable.
