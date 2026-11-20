@@ -57,6 +57,9 @@ class OpalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.notification_log: deque[dict[str, Any]] = deque(maxlen=200)
         self.notification_seq = 0
         self.last_probe: dict[str, Any] | None = None
+        self.snapshots: dict[str, dict[str, str]] = {}
+        self.capture: dict[str, Any] | None = None
+        self.last_capture: dict[str, Any] | None = None
         self.characteristic_properties: dict[str, list[str]] = {}
         self.raw_values: dict[str, int | None] = {
             key: None for key in READ_CHARACTERISTICS
@@ -74,6 +77,8 @@ class OpalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._stop_event.set()
         self._disconnect_event.set()
         self._wake_event.set()
+        if self.capture and self.capture.get("task"):
+            self.capture["task"].cancel()
         if self._runner:
             self._runner.cancel()
             try:

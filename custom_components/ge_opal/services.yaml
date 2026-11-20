@@ -72,3 +72,101 @@ send_raw:
           min: 0
           max: 120
           mode: box
+
+snapshot:
+  name: Snapshot (experimental)
+  description: >-
+    Developer tool. Reads every readable characteristic, stores it under a
+    label, and diffs it (byte and bit level) against the previous or a named
+    snapshot. Read-only. The report is returned, logged and shown as a
+    persistent notification.
+  fields:
+    address:
+      name: Address
+      description: Bluetooth address. Optional if only one Opal is configured.
+      selector:
+        text:
+    label:
+      name: Label
+      description: Name for this snapshot, e.g. "baseline" or "schedule-on".
+      required: true
+      example: baseline
+      selector:
+        text:
+    compare_to:
+      name: Compare to
+      description: Label of an earlier snapshot. Defaults to the most recent one.
+      selector:
+        text:
+    notify:
+      name: Show notification
+      description: Show the report as a persistent notification.
+      default: true
+      selector:
+        boolean:
+
+capture_start:
+  name: Start capture (experimental)
+  description: >-
+    Developer tool. Takes a baseline, subscribes to every notifying
+    characteristic and polls readable ones, logging each change with a
+    timestamp until capture_stop. Read-only.
+  fields:
+    address:
+      name: Address
+      description: Bluetooth address. Optional if only one Opal is configured.
+      selector:
+        text:
+    label:
+      name: Label
+      description: Name for this capture session.
+      required: true
+      example: schedule-experiment
+      selector:
+        text:
+    poll_seconds:
+      name: Poll seconds
+      description: How often readable characteristics are re-read (1-60).
+      default: 2
+      selector:
+        number:
+          min: 1
+          max: 60
+          mode: box
+
+capture_mark:
+  name: Mark capture (experimental)
+  description: >-
+    Developer tool. Adds a timestamped note to the running capture, e.g.
+    "pressed power on the Opal". Later changes are tagged with the latest note.
+  fields:
+    address:
+      name: Address
+      description: Bluetooth address. Optional if only one Opal is configured.
+      selector:
+        text:
+    note:
+      name: Note
+      description: What you just did.
+      required: true
+      example: enabled schedule slot 1 in the GE app
+      selector:
+        text:
+
+capture_stop:
+  name: Stop capture (experimental)
+  description: >-
+    Developer tool. Stops the capture and returns a timeline of marks,
+    notifications and changes plus a start-to-end diff.
+  fields:
+    address:
+      name: Address
+      description: Bluetooth address. Optional if only one Opal is configured.
+      selector:
+        text:
+    notify:
+      name: Show notification
+      description: Show the report as a persistent notification.
+      default: true
+      selector:
+        boolean:
