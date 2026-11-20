@@ -76,7 +76,7 @@ def _require_client(coordinator: OpalCoordinator):
     client = coordinator.client
     if client is None or not client.is_connected:
         raise HomeAssistantError(
-            "The Opal is not connected. Press Reconnect Bluetooth or wait for the connection."
+            "The Opal is not connected. Wait for the connection or use the Re-pair button."
         )
     return client
 
