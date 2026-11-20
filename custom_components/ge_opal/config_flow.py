@@ -14,9 +14,17 @@ from .const import (
     CONF_ADDRESS,
     DEFAULT_NAME,
     DOMAIN,
+    OPAL_NAME_PREFIX,
 )
 
 MANUAL_ENTRY = "manual"
+
+
+def _is_opal(info: bluetooth.BluetoothServiceInfoBleak) -> bool:
+    """Match the manifest bluetooth matchers: service UUID or OPAL local name."""
+    return ADVERTISEMENT_SERVICE_UUID in (
+        uuid.lower() for uuid in info.service_uuids
+    ) or (info.name or "").upper().startswith(OPAL_NAME_PREFIX)
 
 
 class OpalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -83,11 +91,10 @@ class OpalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             for info in bluetooth.async_discovered_service_info(
                 self.hass, connectable=True
             )
-            if ADVERTISEMENT_SERVICE_UUID in info.service_uuids
-            and info.address.upper() not in current
+            if _is_opal(info) and info.address.upper() not in current
         }
         if not self._discovered:
-            return await self.async_step_manual()
+            return await self.async_step_manual(no_devices=True)
 
         options = {
             address: f"{name} ({address})"
@@ -99,9 +106,13 @@ class OpalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({vol.Required(CONF_ADDRESS): vol.In(options)}),
         )
 
-    async def async_step_manual(self, user_input: dict | None = None) -> FlowResult:
+    async def async_step_manual(
+        self, user_input: dict | None = None, no_devices: bool = False
+    ) -> FlowResult:
         """Handle manual configuration by Bluetooth address."""
         errors: dict[str, str] = {}
+        if no_devices:
+            errors["base"] = "no_devices_found"
         if user_input is not None:
             address = user_input[CONF_ADDRESS].strip().upper()
             if not bluetooth.async_ble_device_from_address(

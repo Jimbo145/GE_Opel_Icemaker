@@ -10,6 +10,7 @@ PLATFORMS: Final = ("button", "sensor", "switch")
 CONF_ADDRESS: Final = "address"
 DEFAULT_NAME: Final = "GE Opal Ice Maker"
 
+OPAL_NAME_PREFIX: Final = "OPAL"
 ADVERTISEMENT_SERVICE_UUID: Final = "e2779da7-0a82-4be7-b754-31ed3e727253"
 GATT_SERVICE_UUID: Final = "3e6763c5-9429-40cc-909e-bebf8c7487be"
 
