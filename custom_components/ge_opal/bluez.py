@@ -67,6 +67,39 @@ def _make_agent(events: list[str]):
     return OpalAgent()
 
 
+async def async_remove_device_via_dbus(address: str) -> dict[str, Any]:
+    """Remove the device (and any stale bond) from BlueZ via Adapter1.RemoveDevice."""
+    result: dict[str, Any] = {"ok": False}
+    try:
+        from dbus_fast import BusType
+        from dbus_fast.aio import MessageBus
+
+        bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
+        try:
+            async def _iface(path: str, name: str):
+                intro = await bus.introspect("org.bluez", path)
+                return bus.get_proxy_object("org.bluez", path, intro).get_interface(name)
+
+            managed = await (
+                await _iface("/", "org.freedesktop.DBus.ObjectManager")
+            ).call_get_managed_objects()
+            for path, ifaces in managed.items():
+                dev = ifaces.get("org.bluez.Device1")
+                if dev and str(dev["Address"].value).upper() == address:
+                    adapter = await _iface(str(dev["Adapter"].value), "org.bluez.Adapter1")
+                    await adapter.call_remove_device(path)
+                    result["ok"] = True
+                    result["paired_was"] = bool(dev["Paired"].value)
+                    break
+            else:
+                result["error"] = "device not known to BlueZ"
+        finally:
+            bus.disconnect()
+    except Exception as err:
+        result["error"] = f"{type(err).__name__}: {err}"
+    return result
+
+
 async def async_pair_via_dbus(address: str, timeout: float = 45.0) -> dict[str, Any]:
     """Pair with an agent registered; return a diagnostics dict (``ok`` key)."""
     result: dict[str, Any] = {"ok": False, "agent_events": []}
